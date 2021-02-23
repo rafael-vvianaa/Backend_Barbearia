@@ -1,37 +1,37 @@
 import { Router } from 'express';
-import { startOfHour, parseISO, isEqual } from 'date-fns';
-import AgendamentosRoutesModel from '../models/agendamentoRoutesModel';
+import { parseISO } from 'date-fns';
+import AgendamentoRepository from '../Repository/AgendamentoRepository';
+import CreateAgendamentoService from '../services/CreateAgendamentoService';
 
 // https://localhost:3333/agendamentos
 
 const agendamentosRouter = Router();
 
+const agendamentoRepository = new AgendamentoRepository();
 
-
-
-//salvando em memoria antes te colocar o banco
-const agendamentos: AgendamentosRoutesModel[] = [];
+agendamentosRouter.get('/', (request, response) => {
+    const agendamentos = agendamentoRepository.getall();
+    return response.json(agendamentos);
+});
 
 agendamentosRouter.post('/', (request, response) => {
+ try{
+    const { profissional, date } = request.body;
 
-   const { profissional, date } = request.body;
+    //convertendo a data/hora so para mostrar a data com min,seg zerados.
+    const parseDate = parseISO(date);
 
-   //convertendo a data/hora so para mostrar a data com min,seg zerados.
-   const parseDate = startOfHour(parseISO(date));
+    const createAgendamento = new CreateAgendamentoService(agendamentoRepository);
 
-   const verificarHorarioAgendamento = agendamentos.find(agendament => isEqual(parseDate, agendament.date));
+    const agendament = createAgendamento.execute({  date: parseDate, profissional, });
 
-   if(verificarHorarioAgendamento){
-       return response.status(400).json({message:"Horario ja alocado"});
-   }
 
-   const agendament = new AgendamentosRoutesModel(profissional, parseDate);
+    return response.json(agendament);
+ } catch (error) {
+     return response.status(400).json({error: error.message});
+ }
 
-   agendamentos.push(agendament);
-
-   return response.json(agendament);
-
-})
+});
 
 export default agendamentosRouter;
 
